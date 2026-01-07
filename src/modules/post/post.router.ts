@@ -8,13 +8,18 @@ router.get("/",
     PostController.getAllPosts
 );
 
+router.get("/my-posts",
+    auth(UserRole.USER, UserRole.ADMIN),
+    PostController.getMyPosts
+)
+
 router.get("/:id",
     PostController.getPostById
 );
 
 router.post(
     "/",
-    auth(UserRole.USER),
+    auth(UserRole.USER, UserRole.ADMIN),
     PostController.createPost
 )
 
