@@ -1,6 +1,7 @@
 import { CommentStatus, Post, PostStatus } from "../../../generated/prisma/client";
 import { PostWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
+import { UserRole } from "../../middlewares/auth";
 
 const createPost = async (data: Omit<Post, 'id' | 'createdAt' | 'updatedAt' | 'authorId'>, userId: string) => {
     const result = await prisma.post.create({
@@ -265,11 +266,89 @@ const deletePost = async (postId: string, authorId: string, isAdmin: boolean) =>
     });
 }
 
+const getStats = async () => {
+    return await prisma.$transaction(async (tx) => {
+        const [
+            totalPosts,
+            publishedPosts,
+            draftPosts,
+            archivedPosts,
+            featuredPosts,
+            totalComments,
+            approvedComments,
+            totalUsers,
+            adminCount,
+            userCount,
+            totalViews
+        ] = await Promise.all([
+            tx.post.count(),
+            tx.post.count({
+                where: {
+                    status: PostStatus.PUBLISHED
+                }
+            }),
+            tx.post.count({
+                where: {
+                    status: PostStatus.DRAFT
+                }
+            }),
+            tx.post.count({
+                where: {
+                    status: PostStatus.ARCHIVED
+                }
+            }),
+            tx.post.count({
+                where: {
+                    isFeatured: true
+                }
+            }),
+            tx.comment.count(),
+            tx.comment.count({
+                where: {
+                    status: CommentStatus.APPROVED
+                }
+            }),
+            tx.user.count(),
+            tx.user.count({
+                where: {
+                    role: UserRole.ADMIN
+                }
+            }),
+            tx.user.count({
+                where: {
+                    role: UserRole.USER
+                }
+            }),
+            tx.post.aggregate({
+                _sum: {
+                    views: true
+                }
+            })
+        ])
+
+
+        return {
+            totalPosts,
+            publishedPosts,
+            draftPosts,
+            archivedPosts,
+            featuredPosts,
+            totalComments,
+            approvedComments,
+            totalUsers,
+            adminCount,
+            userCount,
+            totalViews: totalViews._sum.views || 0
+        };
+    });
+}
+
 export const postService = {
     createPost,
     getAllPosts,
     getPostById,
     getMyPosts,
     updatePost,
-    deletePost
+    deletePost,
+    getStats
 }

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { commentService } from "./comment.service";
-import { CommentStatus } from "../../../generated/prisma/enums";
+import { CommentStatus } from "../../../prisma/generated/prisma/enums";
 
 const createPost = async (req: Request, res: Response) => {
     try {
