@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { postService } from "./post.service";
 import { PostStatus } from "../../../generated/prisma/enums";
 import paginationSortingHelper from "../../helpers/paginationSortingHelper";
+import { UserRole } from "../../middlewares/auth";
 
 const createPost = async (req: Request, res: Response) => {
     try {
@@ -78,6 +79,8 @@ const getMyPosts = async (req: Request, res: Response) => {
             })
         }
 
+        console.log("User Object:", user);
+
         const posts = await postService.getMyPosts(user.id as string);
         res.status(200).json(posts);
     } catch (e) {
@@ -88,9 +91,56 @@ const getMyPosts = async (req: Request, res: Response) => {
     }
 }
 
+const updatePost = async (req: Request, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(400).json({
+                error: "Unauthorized!",
+            })
+        }
+        const postId = req.params.postId;
+        const updateData = req.body;
+
+        const isAdmin = user.role === UserRole.ADMIN;
+        const updatedPost = await postService.updatePost(postId, updateData, user.id as string, isAdmin);
+        res.status(200).json(updatedPost);
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Post update failed";
+        res.status(400).json({
+            error: errorMessage,
+            details: e
+        })
+    }
+}
+
+const deletePost = async (req: Request, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            return res.status(400).json({
+                error: "Unauthorized!",
+            })
+        }
+        const postId = req.params.postId;
+
+        const isAdmin = user.role === UserRole.ADMIN;
+        const updatedPost = await postService.deletePost(postId, user.id as string, isAdmin);
+        res.status(200).json(updatedPost);
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Post Delete failed";
+        res.status(400).json({
+            error: errorMessage,
+            details: e
+        })
+    }
+}
+
 export const PostController = {
     createPost,
     getAllPosts,
     getPostById,
-    getMyPosts
+    getMyPosts,
+    updatePost,
+    deletePost
 }
